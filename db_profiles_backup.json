@@ -1,0 +1,15 @@
+{
+  "exported_date": "2026-10-12T10:39:51.641360",
+  "total_profiles": 1,
+  "profiles": {
+    "SIT": {
+      "db_type": "Oracle",
+      "db_user": "SCB_STG",
+      "db_password": "scb1234!",
+      "db_host": "etlsit-scan.se.scb.co.th",
+      "db_port": "3801",
+      "db_name": "etls19_srv.scb",
+      "sql_query": "SELECT * FROM core.X_MAPPING_RR_CODE LIMIT 100"
+    }
+  }
+}

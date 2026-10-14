@@ -1,0 +1,12 @@
+{
+  "uat select": {
+    "db_type": "Oracle",
+    "db_user": "ETL_SELECT",
+    "db_password": "selectscb1234!",
+    "db_host": "etluat-scan.se.scb.co.th",
+    "db_port": "3802",
+    "db_name": "etlu19_srv.scb",
+    "sql_query": "SELECT * FROM core.X_MAPPING_RR_CODE LIMIT 100"
+  },
+  "last_used_profile": "uat select"
+}
