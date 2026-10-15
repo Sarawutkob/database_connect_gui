@@ -8,5 +8,14 @@
     "db_name": "etlu19_srv.scb",
     "sql_query": "SELECT * FROM core.X_MAPPING_RR_CODE LIMIT 100"
   },
-  "last_used_profile": "uat select"
+  "พี่เกมพี่ต้อง": {
+    "db_type": "Oracle",
+    "db_user": "scb_select",
+    "db_password": "Select1234!",
+    "db_host": "ofsw3dbuat-scan.se.scb.co.th",
+    "db_port": "3803",
+    "db_name": "w3u_srv.scb",
+    "sql_query": "SELECT * FROM core.X_MAPPING_RR_CODE LIMIT 100"
+  },
+  "last_used_profile": "พี่เกมพี่ต้อง"
 }

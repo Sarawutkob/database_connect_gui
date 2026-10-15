@@ -987,7 +987,11 @@ class DatabaseConnectorGUI:
                 self.results_text.insert(tk.END, f"📊 Rows: {len(df):,} | Columns: {df.shape[1]}\n")
                 self.results_text.see(tk.END)
                 
-                self.show_table_popup(df, f"Job: {job['name']}")
+                self.show_table_popup(
+                    df ,
+                    job['query'],
+                    job_name=job['name']
+                )
             else:
                 with self.engine.connect() as conn:
                     result = conn.execute(text(job['query']))
@@ -3028,7 +3032,11 @@ class DatabaseConnectorGUI:
             self.execute_btn.config(state="normal", text="▶️ Execute Query")
             
             # Show results in popup table window
-            self.show_table_popup(df, sql_query)
+            self.show_table_popup(
+                df,
+                job['query'],
+                job_name=job['name']
+            )
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to display results:\n{str(e)}")
@@ -3054,7 +3062,16 @@ class DatabaseConnectorGUI:
         
         messagebox.showerror("Query Error", f"Failed to execute query:\n\n{str(error)}")
     
-    def show_table_popup(self, df, sql_query, on_double_click=None):
+    def show_table_popup(
+        self,
+        df,
+        sql_query,
+        on_double_click=None,
+        job_name=None):
+        print("========== SHOW TABLE POPUP ==========")
+        print(sql_query)
+        print
+        ("======================================")
         """Show DataFrame in a popup window with Treeview"""
         # Create popup window
         popup = tk.Toplevel(self.root)
@@ -3223,10 +3240,27 @@ class DatabaseConnectorGUI:
         # Action buttons
         ttk.Button(button_frame, text="📋 Copy Selected",
                   command=lambda: self.copy_selected_rows(tree)).grid(row=0, column=5, padx=5)
-        ttk.Button(button_frame, text="💾 Export to CSV",
-                  command=lambda: self.export_to_csv(df)).grid(row=0, column=6, padx=5)
-        ttk.Button(button_frame, text="❌ Close",
-                  command=popup.destroy).grid(row=0, column=7, padx=5)
+        ttk.Button(
+                button_frame,
+                text="💾 Export to CSV",
+                command=lambda: self.export_to_csv(df)
+            ).grid(row=0, column=6, padx=5)
+
+        ttk.Button(
+                button_frame,
+                text="📤 Export Excel",
+                command=lambda: self.export_to_excel_result(
+                    df,
+                    sql_query,
+                    job_name
+                )
+            ).grid(row=0, column=7, padx=5)
+
+        ttk.Button(
+                button_frame,
+                text="❌ Close",
+                command=popup.destroy
+            ).grid(row=0, column=8, padx=5)
         
         # Initialize button states
         prev_btn.config(state="disabled")
@@ -3287,6 +3321,161 @@ class DatabaseConnectorGUI:
                 messagebox.showinfo("Success", f"Data exported successfully!\n\nFile: {file_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to export: {str(e)}")
+    
+    def export_to_excel_result(
+        self,
+        df,
+        sql_query,
+        job_name=None):
+        """Export current query result to Excel format same as Run All Job Export"""
+        print("EXPORT SQL:")
+        print(sql_query)
+        try:
+            import openpyxl
+            from openpyxl.styles import Border, Side, PatternFill
+
+            file_path = filedialog.asksaveasfilename(
+                title="Export Excel",
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx")]
+            )
+
+            if not file_path:
+                return
+
+            with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+
+                if job_name:
+
+                    import re
+
+                    sheet_name = re.sub(
+                        r'[\\/*?:\[\]]',
+                        '_',
+                        job_name
+                    )
+
+                    sheet_name = sheet_name[:31]
+
+                else:
+
+                    import re
+
+                    if job_name:
+
+                        sheet_name = re.sub(
+                            r'[\\/*?:\[\]]',
+                            '_',
+                            str(job_name)
+                        )
+
+                        sheet_name = sheet_name[:31]
+
+                    else:
+
+                        sheet_name = "Query_Result"
+
+                df_export = df.copy()
+
+                df_export.to_excel(
+                    writer,
+                    index=False,
+                    sheet_name=sheet_name
+                )
+
+                ws = writer.sheets[sheet_name]
+
+                header_fill = PatternFill(
+                    fill_type="solid",
+                    fgColor="BC9BFF"
+                )
+
+                thin = Side(
+                    border_style="thin",
+                    color="000000"
+                )
+
+                all_border = Border(
+                    left=thin,
+                    right=thin,
+                    top=thin,
+                    bottom=thin
+                )
+
+                # Header
+                for cell in ws[1]:
+                    cell.fill = header_fill
+                    cell.border = all_border
+                    cell.number_format = "@"
+
+                # Data
+                for row in ws.iter_rows(
+                        min_row=2,
+                        max_row=ws.max_row):
+                    for cell in row:
+                        cell.border = all_border
+                        cell.number_format = "@"
+
+                # Auto Width
+                for col_idx, col_name in enumerate(df_export.columns, 1):
+
+                    letter = openpyxl.utils.get_column_letter(col_idx)
+
+                    max_len = len(str(col_name)) + 2
+
+                    try:
+                        sample_df = df_export.head(1000)
+
+                        longest_value = (
+                            sample_df[col_name]
+                            .astype(str)
+                            .map(len)
+                            .max()
+                        )
+
+                        max_len = max(
+                            max_len,
+                            longest_value + 2
+                        )
+                    except Exception:
+                        pass
+
+                    ws.column_dimensions[letter].width = min(max_len, 80)
+                # ====================================
+                # SQL QUERY
+                # ====================================
+
+                sql_lines = str(sql_query).splitlines()
+
+                start_row = ws.max_row + 3
+
+                ws.cell(
+                    row=start_row,
+                    column=1,
+                    value="SQL Query"
+                )
+
+                start_row += 1
+
+                for line_no, line in enumerate(sql_lines):
+
+                    ws.cell(
+                        row=start_row + line_no,
+                        column=1,
+                        value=line
+                    )
+
+                    ws.freeze_panes = "A2"
+            messagebox.showinfo(
+                "Success",
+                f"Excel exported successfully.\n\n{file_path}"
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Export Error",
+                str(e)
+            )
     
     def list_tables(self):
         """List all schemas and tables in the database"""
@@ -3836,7 +4025,11 @@ class DatabaseConnectorGUI:
                 self.root.update_idletasks()
                 
                 # Show popup window for each job result
-                self.show_table_popup(data, f"Job #{job_num}: {job['name']}")
+                self.show_table_popup(
+                    data,
+                    job['query'],
+                    job_name=job['name']
+                )
             else:
                 # Handle UPDATE/INSERT/DELETE result
                 query_upper = job['query'].strip().upper()
